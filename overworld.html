@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Realm of Echoes — Overworld</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --parchment: #f4e4c1;
+    --parchment-dark: #d4b896;
+    --ink: #2c1810;
+    --ink-light: #5c3d2e;
+    --blood: #8b1a1a;
+    --gold: #c9a227;
+    --gold-light: #e8c84a;
+    --forest: #2d5a27;
+    --water: #1a4a6b;
+    --mountain: #6b5a4e;
+    --shadow: rgba(0,0,0,0.6);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0804;
+    font-family: 'Crimson Text', serif;
+    color: var(--parchment);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* === HEADER === */
+  #header {
+    background: linear-gradient(180deg, #1a0e06 0%, #0f0804 100%);
+    border-bottom: 2px solid var(--gold);
+    padding: 6px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    box-shadow: 0 2px 20px rgba(201,162,39,0.3);
+  }
+
+  #header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--gold-light);
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(201,162,39,0.5);
+  }
+
+  #header .subtitle {
+    font-size: 0.7rem;
+    color: var(--parchment-dark);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+  }
+
+  /* === MAIN LAYOUT === */
+  #game-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* === LEFT PANEL === */
+  #left-panel {
+    width: 200px;
+    background: linear-gradient(180deg, #110b05 0%, #0a0702 100%);
+    border-right: 1px solid #3a2a15;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .panel-section {
+    border: 1px solid #4a3520;
+    border-radius: 2px;
+    padding: 10px;
+    background: rgba(201,162,39,0.03);
+  }
+
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    border-bottom: 1px solid #4a3520;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+
+  /* Minimap */
+  #minimap-canvas {
+    width: 100%;
+    image-rendering: pixelated;
+    border: 1px solid #4a3520;
+    border-radius: 1px;
+  }
+
+  /* Stats */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+    color: var(--parchment);
+  }
+
+  .stat-label {
+    color: var(--parchment-dark);
+    font-size: 0.75rem;
+  }
+
+  .stat-bar {
+    width: 80px;
+    height: 6px;
+    background: #2a1a0a;
+    border: 1px solid #4a3520;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .stat-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+
+  .hp-fill { background: linear-gradient(90deg, #8b1a1a, #c0392b); }
+  .mp-fill { background: linear-gradient(90deg, #1a3a8b, #2980b9); }
+  .xp-fill { background: linear-gradient(90deg, #5a8b1a, #7cb518); }
+
+  /* Coords */
+  #coords {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.8rem;
+    color: var(--parchment-dark);
+    text-align: center;
+  }
+
+  /* === CANVAS CONTAINER === */
+  #canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050302;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #world-canvas {
+    image-rendering: pixelated;
+    cursor: crosshair;
+  }
+
+  /* === RIGHT PANEL === */
+  #right-panel {
+    width: 220px;
+    background: linear-gradient(180deg, #110b05 0%, #0a0702 100%);
+    border-left: 1px solid #3a2a15;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Event log */
+  #event-log {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 300px;
+  }
+
+  #event-log::-webkit-scrollbar { width: 4px; }
+  #event-log::-webkit-scrollbar-track { background: #110b05; }
+  #event-log::-webkit-scrollbar-thumb { background: #4a3520; }
+
+  .log-entry {
+    font-size: 0.78rem;
+    line-height: 1.3;
+    padding: 3px 5px;
+    border-left: 2px solid #4a3520;
+    color: var(--parchment-dark);
+    animation: fadeIn 0.3s ease;
+  }
+
+  .log-entry.combat { border-color: var(--blood); color: #e07070; }
+  .log-entry.discovery { border-color: var(--gold); color: #e8c84a; }
+  .log-entry.system { border-color: #4a6b2a; color: #90c060; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(5px); } to { opacity: 1; transform: none; } }
+
+  /* Legend */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--parchment-dark);
+    margin-bottom: 3px;
+  }
+
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+    border-radius: 1px;
+  }
+
+  /* Controls hint */
+  #controls-hint {
+    font-size: 0.68rem;
+    color: #6a5040;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  /* === ENCOUNTER OVERLAY === */
+  #encounter-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  #encounter-overlay.active { display: flex; }
+
+  .encounter-box {
+    background: linear-gradient(180deg, #1a0e06 0%, #120a04 100%);
+    border: 2px solid var(--blood);
+    border-radius: 2px;
+    padding: 30px 40px;
+    text-align: center;
+    max-width: 360px;
+    box-shadow: 0 0 40px rgba(139,26,26,0.5), inset 0 0 20px rgba(0,0,0,0.5);
+    animation: encounterIn 0.3s ease;
+  }
+
+  @keyframes encounterIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .encounter-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    color: var(--blood);
+    margin-bottom: 6px;
+    text-shadow: 0 0 15px rgba(139,26,26,0.7);
+  }
+
+  .encounter-monster {
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem;
+    color: var(--parchment);
+    margin: 12px 0;
+    font-weight: 900;
+  }
+
+  .encounter-desc {
+    font-size: 0.9rem;
+    color: var(--parchment-dark);
+    font-style: italic;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .encounter-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    padding: 10px 22px;
+    border: 1px solid;
+    border-radius: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    margin: 4px;
+  }
+
+  .btn-fight {
+    background: var(--blood);
+    border-color: #c0392b;
+    color: var(--parchment);
+  }
+  .btn-fight:hover { background: #c0392b; box-shadow: 0 0 12px rgba(192,57,43,0.5); }
+
+  .btn-flee {
+    background: transparent;
+    border-color: #4a3520;
+    color: var(--parchment-dark);
+  }
+  .btn-flee:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* === TOWN OVERLAY === */
+  #town-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  #town-overlay.active { display: flex; }
+
+  .town-box {
+    background: linear-gradient(180deg, #1a1408 0%, #110e04 100%);
+    border: 2px solid var(--gold);
+    border-radius: 2px;
+    padding: 28px 36px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 0 30px rgba(201,162,39,0.3);
+    animation: encounterIn 0.3s ease;
+  }
+
+  .town-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.6rem;
+    color: var(--gold-light);
+    margin-bottom: 4px;
+    text-shadow: 0 0 15px rgba(201,162,39,0.5);
+  }
+
+  .town-subtitle {
+    font-size: 0.8rem;
+    color: var(--parchment-dark);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .town-desc {
+    font-size: 0.9rem;
+    color: var(--parchment);
+    font-style: italic;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .town-services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .service-tag {
+    font-size: 0.68rem;
+    padding: 3px 8px;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .btn-leave {
+    background: transparent;
+    border: 1px solid #4a3520;
+    border-radius: 1px;
+    color: var(--parchment-dark);
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-leave:hover { border-color: var(--gold); color: var(--gold); }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <h1>REALM OF ECHOES</h1>
+    <div class="subtitle">The Overworld &mdash; Alpha</div>
+  </div>
+  <div id="coords" style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--parchment-dark);">
+    ✦ EXPLORE THE REALM ✦
+  </div>
+</div>
+
+<div id="game-layout">
+
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+
+    <div class="panel-section">
+      <div class="panel-title">⬡ Minimap</div>
+      <canvas id="minimap-canvas" width="176" height="132"></canvas>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">⚔ Adventurer</div>
+      <div style="font-family:'Cinzel',serif;font-size:0.85rem;color:var(--gold);margin-bottom:8px;">Unnamed Hero</div>
+      <div style="font-size:0.72rem;color:var(--parchment-dark);margin-bottom:10px;">Wanderer · Lv. 1</div>
+
+      <div class="stat-row">
+        <span class="stat-label">HP</span>
+        <div class="stat-bar"><div class="stat-fill hp-fill" id="hp-bar" style="width:85%"></div></div>
+        <span style="font-size:0.7rem;">34/40</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">MP</span>
+        <div class="stat-bar"><div class="stat-fill mp-fill" id="mp-bar" style="width:60%"></div></div>
+        <span style="font-size:0.7rem;">12/20</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">XP</span>
+        <div class="stat-bar"><div class="stat-fill xp-fill" id="xp-bar" style="width:20%"></div></div>
+        <span style="font-size:0.7rem;">40/200</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">◈ Location</div>
+      <div id="location-name" style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--parchment);margin-bottom:4px;">Unknown Wilds</div>
+      <div id="tile-coords" style="font-size:0.72rem;color:var(--parchment-dark);">Coordinates: —</div>
+    </div>
+
+    <div style="flex:1"></div>
+
+    <div id="controls-hint">
+      WASD / Arrow Keys<br>to move<br><br>
+      Walk into towns<br>or danger zones<br>to interact
+    </div>
+
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <canvas id="world-canvas"></canvas>
+
+    <!-- Encounter Overlay -->
+    <div id="encounter-overlay">
+      <div class="encounter-box">
+        <div class="encounter-title">⚔ COMBAT ENCOUNTER</div>
+        <div id="enc-monster" class="encounter-monster">Goblin Raider</div>
+        <div id="enc-desc" class="encounter-desc">A scraggly goblin leaps from the underbrush, blade drawn and eyes wild with greed.</div>
+        <div>
+          <button class="encounter-btn btn-fight" onclick="handleFight()">⚔ Fight</button>
+          <button class="encounter-btn btn-flee" onclick="handleFlee()">↩ Flee</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Town Overlay -->
+    <div id="town-overlay">
+      <div class="town-box">
+        <div id="town-name-display" class="town-title">Ashford</div>
+        <div id="town-type-display" class="town-subtitle">Market Town</div>
+        <div id="town-desc-display" class="town-desc">"A weathered trading post where merchants hawk their wares beneath banners faded by years of sun and rain."</div>
+        <div id="town-services" class="town-services"></div>
+        <button class="btn-leave" onclick="leaveTown()">↩ Return to World</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+
+    <div class="panel-section" style="flex:1;display:flex;flex-direction:column;">
+      <div class="panel-title">📜 Chronicle</div>
+      <div id="event-log">
+        <div class="log-entry system">The realm awaits your footsteps, traveller...</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">◈ Legend</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#3a6b30"></div>Grasslands</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#1e4a1a"></div>Forest</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#5a4e3a"></div>Mountains</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#1a3f6b"></div>Deep Water</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#2a6080"></div>Shallows</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#c9a227;opacity:0.7"></div>Town</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#6b1a1a"></div>Danger Zone</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  WORLD DEFINITION
+// ============================================================
+const TILE = 32;
+
+// Tile types
+const T = {
+  GRASS: 0,
+  FOREST: 1,
+  MOUNTAIN: 2,
+  DEEP_WATER: 3,
+  SHALLOW: 4,
+  TOWN: 5,
+  DANGER: 6,
+  SAND: 7,
+  SNOW: 8,
+  DUNGEON: 9,
+};
+
+const PASSABLE = [T.GRASS, T.FOREST, T.TOWN, T.DANGER, T.SAND];
+
+// 60x45 world map
+// We'll procedurally build it with hand-crafted regions
+const MAP_W = 60;
+const MAP_H = 45;
+
+// Towns
+const TOWNS = [
+  { x: 12, y: 10, name: "Ashford",      type: "Market Town",      desc: '"A weathered trading post where merchants hawk their wares beneath banners faded by years of sun and rain."', services: ["Inn","Blacksmith","Market","Temple"] },
+  { x: 45, y: 8,  name: "Duskhollow",   type: "Mage's Citadel",   desc: '"Towers of pale stone pierce the clouds above this arcane city, where magic seeps from every cobblestone."', services: ["Mage Guild","Library","Inn","Alchemist"] },
+  { x: 10, y: 32, name: "Ironhaven",    type: "Dwarven Outpost",  desc: '"Built into the mountainside, Ironhaven reeks of forge-smoke and the ale of a dozen dwarven clans."', services: ["Blacksmith","Armoury","Inn","Mine"] },
+  { x: 48, y: 35, name: "Saltmere",     type: "Fishing Village",  desc: '"Weatherbeaten nets hang over every doorway. The salt air carries whispers of sea-monsters seen at dusk."', services: ["Docks","Inn","Fish Market","Healer"] },
+  { x: 30, y: 22, name: "Crossroads",   type: "Wayfarers' Rest",  desc: '"Four roads meet here. Adventurers, traders, and thieves mingle freely at the sign of the Broken Wheel."', services: ["Inn","Stables","Tavern","Notice Board"] },
+];
+
+const MONSTERS = [
+  { name: "Goblin Raider",     desc: "A scraggly goblin leaps from the underbrush, blade drawn and eyes wild with greed." },
+  { name: "Dire Wolf",         desc: "A massive wolf circles you slowly, yellow eyes gleaming through the trees." },
+  { name: "Skeleton Warrior",  desc: "Yellowed bones rattle as this undead soldier raises a rusted sword." },
+  { name: "Bandit Cutthroat",  desc: "A scarred rogue drops from the shadows, demanding your coin." },
+  { name: "Giant Spider",      desc: "Mandibles clicking, a horse-sized spider descends on glistening webs." },
+  { name: "Orc Berserker",     desc: "Covered in warpaint, the orc roars and charges without hesitation." },
+  { name: "Cave Troll",        desc: "It sniffs the air and grins horribly — it can smell your fear." },
+  { name: "Shadow Wraith",     desc: "A cold darkness coalesces into form, and the temperature drops sharply." },
+];
+
+// Build world map
+function buildMap() {
+  const map = new Uint8Array(MAP_W * MAP_H).fill(T.GRASS);
+
+  function set(x, y, t) { if (x>=0&&x<MAP_W&&y>=0&&y<MAP_H) map[y*MAP_W+x]=t; }
+  function fill(x1,y1,x2,y2,t) {
+    for (let y=y1;y<=y2;y++) for (let x=x1;x<=x2;x++) set(x,y,t);
+  }
+  function circle(cx,cy,r,t) {
+    for (let y=cy-r;y<=cy+r;y++) for (let x=cx-r;x<=cx+r;x++)
+      if ((x-cx)**2+(y-cy)**2 <= r*r) set(x,y,t);
+  }
+  function blob(cx,cy,r,t,irregularity=0.4) {
+    for (let y=cy-r-2;y<=cy+r+2;y++) for (let x=cx-r-2;x<=cx+r+2;x++) {
+      const dist = Math.sqrt((x-cx)**2+(y-cy)**2);
+      const noise = (Math.sin(x*0.7+y*0.5)*0.5+Math.cos(x*0.3-y*0.8)*0.5)*irregularity;
+      if (dist <= r + noise*r) set(x,y,t);
+    }
+  }
+
+  // === WATER BODIES ===
+  // Large western sea
+  fill(0,0,5,MAP_H-1, T.DEEP_WATER);
+  fill(6,0,8,MAP_H-1, T.SHALLOW);
+  // Northern lake
+  blob(32,5,5, T.DEEP_WATER);
+  circle(32,5,6, T.SHALLOW);
+  // Southern sea inlet
+  fill(20,38,40,MAP_H-1, T.DEEP_WATER);
+  fill(18,40,42,MAP_H-1, T.DEEP_WATER);
+  circle(30,42,6, T.DEEP_WATER);
+  fill(19,37,41,MAP_H-1, T.SHALLOW);
+  // Eastern coast
+  fill(MAP_W-4,5,MAP_W-1,MAP_H-1, T.DEEP_WATER);
+  fill(MAP_W-6,5,MAP_W-5,MAP_H-1, T.SHALLOW);
+  // River
+  for (let y=8;y<38;y++) { set(24,y,T.SHALLOW); set(25,y,T.SHALLOW); }
+
+  // === FORESTS ===
+  blob(15,18,7, T.FOREST, 0.5);
+  blob(35,14,6, T.FOREST, 0.6);
+  blob(20,28,5, T.FOREST, 0.4);
+  blob(42,25,8, T.FOREST, 0.5);
+  blob(8,22,4, T.FOREST, 0.4);
+  blob(52,18,5, T.FOREST, 0.5);
+  blob(28,32,4, T.FOREST, 0.3);
+
+  // === MOUNTAINS ===
+  blob(10,35,6, T.MOUNTAIN, 0.3);
+  blob(18,5,5, T.MOUNTAIN, 0.4);
+  blob(50,12,4, T.MOUNTAIN, 0.35);
+  blob(38,38,5, T.MOUNTAIN, 0.3);
+  for (let i=0;i<8;i++) set(8+i,36-i, T.MOUNTAIN);
+  for (let i=0;i<6;i++) set(14+i,33+i, T.MOUNTAIN);
+
+  // === SAND (beaches/desert) ===
+  blob(44,32,4, T.SAND, 0.5);
+  for (let y=37;y<MAP_H;y++) for (let x=19;x<43;x++)
+    if (map[y*MAP_W+x]===T.GRASS) set(x,y,T.SAND);
+
+  // === DANGER ZONES ===
+  blob(20,14,3, T.DANGER, 0.6);
+  blob(38,28,4, T.DANGER, 0.5);
+  blob(10,25,3, T.DANGER, 0.4);
+  blob(50,30,3, T.DANGER, 0.5);
+  blob(28,8, 3, T.DANGER, 0.4);
+  blob(43,40,3, T.DANGER, 0.5);
+
+  // === TOWNS ===
+  for (const t of TOWNS) {
+    for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) set(t.x+dx,t.y+dy,T.TOWN);
+  }
+
+  return map;
+}
+
+const worldMap = buildMap();
+
+// ============================================================
+//  CANVAS SETUP
+// ============================================================
+const canvas = document.getElementById('world-canvas');
+const ctx    = canvas.getContext('2d');
+const mmCanvas = document.getElementById('minimap-canvas');
+const mmCtx  = mmCanvas.getContext('2d');
+
+// Viewport
+let vpW, vpH, vpTilesW, vpTilesH;
+
+function resizeCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  canvas.width  = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  vpW = canvas.width;
+  vpH = canvas.height;
+  vpTilesW = Math.ceil(vpW / TILE) + 2;
+  vpTilesH = Math.ceil(vpH / TILE) + 2;
+  render();
+}
+
+// Player
+const player = { x: 30, y: 22, prevX: 30, prevY: 22 };
+
+// Camera (centered on player)
+let camX = 0, camY = 0;
+
+// ============================================================
+//  TILE RENDERING
+// ============================================================
+const TILE_COLORS = {
+  [T.GRASS]:      [['#3a6b30','#4a7a38','#355e2a','#426834']],
+  [T.FOREST]:     [['#1e4a1a','#163a14','#1a4218','#254e20']],
+  [T.MOUNTAIN]:   [['#5a4e3a','#6a5c46','#504438','#5e5040']],
+  [T.DEEP_WATER]: [['#1a3f6b','#153560','#1e4878','#16386a']],
+  [T.SHALLOW]:    [['#2a6080','#236878','#206070','#2a6a88']],
+  [T.TOWN]:       [['#8b7355','#9a8060','#7d6448','#a08a68']],
+  [T.DANGER]:     [['#4a1515','#5a1c1c','#3e1010','#521818']],
+  [T.SAND]:       [['#c4a96a','#b89a58','#cdb278','#c0a464']],
+  [T.SNOW]:       [['#ddeeff','#e8f2ff','#d5e8f8','#e0eeff']],
+};
+
+// Seeded noise for consistent variation
+const tileVariant = new Uint8Array(MAP_W * MAP_H);
+for (let i = 0; i < tileVariant.length; i++) tileVariant[i] = i % 4;
+
+function tileColor(type, idx) {
+  const colors = TILE_COLORS[type] || TILE_COLORS[T.GRASS];
+  const v = tileVariant[idx] % colors[0].length;
+  return colors[0][v];
+}
+
+function drawTile(tx, ty, screenX, screenY) {
+  if (tx<0||tx>=MAP_W||ty<0||ty>=MAP_H) { ctx.fillStyle='#050302'; ctx.fillRect(screenX,screenY,TILE,TILE); return; }
+  const idx = ty*MAP_W+tx;
+  const type = worldMap[idx];
+  ctx.fillStyle = tileColor(type, idx);
+  ctx.fillRect(screenX, screenY, TILE, TILE);
+
+  // Decorative details
+  ctx.save();
+  if (type === T.FOREST) {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    const n = (idx % 3) + 1;
+    for (let i=0;i<n;i++) {
+      const px = screenX + ((idx*7+i*13)%24)+4;
+      const py = screenY + ((idx*11+i*7)%20)+4;
+      ctx.beginPath(); ctx.arc(px,py,3+i,0,Math.PI*2); ctx.fill();
+    }
+  }
+  if (type === T.MOUNTAIN) {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.moveTo(screenX+TILE/2, screenY+4);
+    ctx.lineTo(screenX+TILE-4, screenY+TILE-4);
+    ctx.lineTo(screenX+4, screenY+TILE-4);
+    ctx.closePath(); ctx.fill();
+  }
+  if (type === T.DEEP_WATER || type === T.SHALLOW) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    const off = (Date.now()/1200 + idx*0.1) % TILE;
+    ctx.beginPath(); ctx.moveTo(screenX,screenY+off); ctx.lineTo(screenX+TILE,screenY+off); ctx.stroke();
+  }
+  if (type === T.TOWN) {
+    // Roof-like markings
+    ctx.fillStyle = 'rgba(80,40,10,0.4)';
+    ctx.fillRect(screenX+6, screenY+8, 20, 14);
+    ctx.fillStyle = 'rgba(139,26,26,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(screenX+4, screenY+10);
+    ctx.lineTo(screenX+16, screenY+4);
+    ctx.lineTo(screenX+28, screenY+10);
+    ctx.closePath(); ctx.fill();
+  }
+  if (type === T.DANGER) {
+    if (idx % 5 === 0) {
+      ctx.fillStyle = 'rgba(180,20,20,0.2)';
+      ctx.beginPath(); ctx.arc(screenX+TILE/2, screenY+TILE/2, 8, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function render() {
+  // Center camera on player
+  camX = player.x * TILE - vpW/2 + TILE/2;
+  camY = player.y * TILE - vpH/2 + TILE/2;
+
+  const startTX = Math.floor(camX / TILE);
+  const startTY = Math.floor(camY / TILE);
+  const offX = -(camX % TILE);
+  const offY = -(camY % TILE);
+
+  ctx.clearRect(0,0,vpW,vpH);
+
+  // Draw tiles
+  for (let ty=0; ty<vpTilesH; ty++) {
+    for (let tx=0; tx<vpTilesW; tx++) {
+      drawTile(startTX+tx, startTY+ty, tx*TILE+offX, ty*TILE+offY);
+    }
+  }
+
+  // Grid (very subtle)
+  ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+  ctx.lineWidth = 0.5;
+  for (let tx=0; tx<vpTilesW; tx++) {
+    ctx.beginPath(); ctx.moveTo(tx*TILE+offX,0); ctx.lineTo(tx*TILE+offX,vpH); ctx.stroke();
+  }
+  for (let ty=0; ty<vpTilesH; ty++) {
+    ctx.beginPath(); ctx.moveTo(0,ty*TILE+offY); ctx.lineTo(vpW,ty*TILE+offY); ctx.stroke();
+  }
+
+  // Town labels
+  for (const town of TOWNS) {
+    const sx = (town.x - startTX)*TILE + offX;
+    const sy = (town.y - startTY)*TILE + offY;
+    if (sx > -60 && sx < vpW+60 && sy > -30 && sy < vpH+30) {
+      ctx.save();
+      ctx.font = "bold 10px 'Cinzel', serif";
+      ctx.fillStyle = '#e8c84a';
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = 4;
+      ctx.textAlign = 'center';
+      ctx.fillText(town.name, sx+TILE/2, sy-5);
+      ctx.restore();
+    }
+  }
+
+  // Danger zone labels
+  // (subtle glow effect on danger tiles handled in drawTile)
+
+  // Draw player
+  const px = vpW/2;
+  const py = vpH/2;
+
+  // Shadow
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.ellipse(px+TILE/2, py+TILE-6, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#c9a227';
+  ctx.beginPath(); ctx.arc(px+TILE/2, py+TILE/2-2, 10, 0, Math.PI*2); ctx.fill();
+
+  ctx.fillStyle = '#8b1a1a';
+  ctx.fillRect(px+TILE/2-5, py+TILE/2+6, 10, 10);
+
+  // Outline
+  ctx.strokeStyle = '#2c1810';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(px+TILE/2, py+TILE/2-2, 10, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeRect(px+TILE/2-5, py+TILE/2+6, 10, 10);
+
+  // Direction dot
+  ctx.fillStyle = '#2c1810';
+  ctx.beginPath(); ctx.arc(px+TILE/2, py+TILE/2-5, 3, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+
+  // Draw minimap
+  drawMinimap();
+  updateHUD();
+}
+
+// ============================================================
+//  MINIMAP
+// ============================================================
+const MM_W = 176, MM_H = 132;
+const MM_COLORS = {
+  [T.GRASS]:'#3a6b30',[T.FOREST]:'#1e4a1a',[T.MOUNTAIN]:'#5a4e3a',
+  [T.DEEP_WATER]:'#1a3f6b',[T.SHALLOW]:'#2a6080',[T.TOWN]:'#c9a227',
+  [T.DANGER]:'#6b1a1a',[T.SAND]:'#c4a96a',[T.SNOW]:'#ddeeff',[T.DUNGEON]:'#4a2a6b'
+};
+
+const mmImageData = mmCtx.createImageData(MM_W, MM_H);
+
+function drawMinimap() {
+  const data = mmImageData.data;
+  const scaleX = MAP_W / MM_W;
+  const scaleY = MAP_H / MM_H;
+
+  for (let py=0;py<MM_H;py++) {
+    for (let px=0;px<MM_W;px++) {
+      const tx = Math.floor(px*scaleX);
+      const ty = Math.floor(py*scaleY);
+      const type = worldMap[ty*MAP_W+tx];
+      const hex = MM_COLORS[type] || '#3a6b30';
+      const r = parseInt(hex.slice(1,3),16);
+      const g = parseInt(hex.slice(3,5),16);
+      const b = parseInt(hex.slice(5,7),16);
+      const i = (py*MM_W+px)*4;
+      data[i]=r; data[i+1]=g; data[i+2]=b; data[i+3]=255;
+    }
+  }
+  mmCtx.putImageData(mmImageData, 0, 0);
+
+  // Player dot
+  const mmPX = Math.floor(player.x / MAP_W * MM_W);
+  const mmPY = Math.floor(player.y / MAP_H * MM_H);
+  mmCtx.fillStyle = '#e8c84a';
+  mmCtx.beginPath(); mmCtx.arc(mmPX, mmPY, 3, 0, Math.PI*2); mmCtx.fill();
+  mmCtx.strokeStyle = '#2c1810'; mmCtx.lineWidth = 1;
+  mmCtx.stroke();
+}
+
+// ============================================================
+//  HUD
+// ============================================================
+function updateHUD() {
+  document.getElementById('tile-coords').textContent = `Coordinates: ${player.x}, ${player.y}`;
+  const type = worldMap[player.y*MAP_W+player.x];
+  const typeNames = {
+    [T.GRASS]:'Open Grasslands',[T.FOREST]:'Dense Forest',[T.MOUNTAIN]:'Rocky Mountains',
+    [T.DEEP_WATER]:'Deep Waters',[T.SHALLOW]:'Shallow Waters',[T.TOWN]:'Town',
+    [T.DANGER]:'Danger Zone!',[T.SAND]:'Sandy Wastes',[T.SNOW]:'Frozen Tundra'
+  };
+
+  // Check town
+  let inTown = null;
+  for (const t of TOWNS) {
+    if (Math.abs(player.x-t.x)<=1 && Math.abs(player.y-t.y)<=1) { inTown = t; break; }
+  }
+  document.getElementById('location-name').textContent = inTown ? inTown.name : (typeNames[type] || 'Unknown Wilds');
+}
+
+// ============================================================
+//  MOVEMENT & INPUT
+// ============================================================
+const keys = {};
+let moveTimer = 0;
+const MOVE_INTERVAL = 150; // ms between moves
+
+document.addEventListener('keydown', e => {
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)) {
+    e.preventDefault();
+    keys[e.key] = true;
+  }
+});
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+let inCombat = false;
+let inTownUI = false;
+let justEntered = false;
+let encounterCooldown = 0;
+
+function tryMove(dx, dy) {
+  if (inCombat || inTownUI) return;
+  const nx = player.x + dx;
+  const ny = player.y + dy;
+  if (nx<0||nx>=MAP_W||ny<0||ny>=MAP_H) return;
+  const type = worldMap[ny*MAP_W+nx];
+  if (!PASSABLE.includes(type)) return;
+
+  player.prevX = player.x;
+  player.prevY = player.y;
+  player.x = nx;
+  player.y = ny;
+
+  // Check town entry
+  for (const t of TOWNS) {
+    if (Math.abs(nx-t.x)<=1 && Math.abs(ny-t.y)<=1) {
+      if (!justEntered) {
+        justEntered = true;
+        showTown(t);
+        addLog(`You enter ${t.name}.`, 'discovery');
+        return;
+      }
+      return;
+    }
+  }
+  justEntered = false;
+
+  // Check danger zone encounter
+  if (type === T.DANGER && encounterCooldown <= 0) {
+    if (Math.random() < 0.35) {
+      triggerEncounter();
+      return;
+    }
+    encounterCooldown = 5;
+  }
+
+  if (type === T.FOREST && encounterCooldown <= 0) {
+    if (Math.random() < 0.1) {
+      triggerEncounter();
+      return;
+    }
+  }
+
+  encounterCooldown = Math.max(0, encounterCooldown - 1);
+
+  // Log interesting tiles
+  const prevType = worldMap[player.prevY*MAP_W+player.prevX];
+  if (type !== prevType) {
+    const msgs = {
+      [T.FOREST]: 'You enter a dense, shadowed forest.',
+      [T.MOUNTAIN]: 'The path grows steep and rocky.',
+      [T.DANGER]: '⚠ A chill runs down your spine. Something lurks here.',
+      [T.SAND]: 'Hot sand crunches beneath your boots.',
+      [T.GRASS]: 'You emerge onto open grassland.',
+    };
+    if (msgs[type]) addLog(msgs[type]);
+  }
+
+  render();
+}
+
+// ============================================================
+//  ENCOUNTER SYSTEM
+// ============================================================
+function triggerEncounter() {
+  const m = MONSTERS[Math.floor(Math.random()*MONSTERS.length)];
+  document.getElementById('enc-monster').textContent = m.name;
+  document.getElementById('enc-desc').textContent = m.desc;
+  document.getElementById('encounter-overlay').classList.add('active');
+  addLog(`⚔ Encountered: ${m.name}!`, 'combat');
+  inCombat = true;
+}
+
+function handleFight() {
+  document.getElementById('encounter-overlay').classList.remove('active');
+  inCombat = false;
+  encounterCooldown = 8;
+  const won = Math.random() > 0.3;
+  if (won) {
+    const xp = Math.floor(Math.random()*30)+10;
+    addLog(`Victory! You defeated the enemy and gained ${xp} XP.`, 'system');
+    const xpBar = document.getElementById('xp-bar');
+    const current = parseInt(xpBar.style.width) || 20;
+    xpBar.style.width = Math.min(100, current+xp/2) + '%';
+  } else {
+    addLog('You fought valiantly but were forced back!', 'combat');
+    const hp = document.getElementById('hp-bar');
+    const current = parseInt(hp.style.width) || 85;
+    hp.style.width = Math.max(10, current - 15) + '%';
+  }
+  render();
+}
+
+function handleFlee() {
+  document.getElementById('encounter-overlay').classList.remove('active');
+  inCombat = false;
+  encounterCooldown = 5;
+  // Move player back
+  player.x = player.prevX;
+  player.y = player.prevY;
+  addLog('You flee from the encounter!');
+  render();
+}
+
+// ============================================================
+//  TOWN SYSTEM
+// ============================================================
+function showTown(town) {
+  document.getElementById('town-name-display').textContent = town.name;
+  document.getElementById('town-type-display').textContent = town.type;
+  document.getElementById('town-desc-display').textContent = town.desc;
+  const svc = document.getElementById('town-services');
+  svc.innerHTML = town.services.map(s => `<span class="service-tag">${s}</span>`).join('');
+  document.getElementById('town-overlay').classList.add('active');
+  inTownUI = true;
+}
+
+function leaveTown() {
+  document.getElementById('town-overlay').classList.remove('active');
+  inTownUI = false;
+  addLog('You step back out into the world.');
+  render();
+}
+
+// ============================================================
+//  EVENT LOG
+// ============================================================
+function addLog(msg, type='') {
+  const log = document.getElementById('event-log');
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + type;
+  div.textContent = msg;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  while (log.children.length > 60) log.removeChild(log.firstChild);
+}
+
+// ============================================================
+//  GAME LOOP
+// ============================================================
+let lastTime = 0;
+let moveAccum = 0;
+
+function gameLoop(ts) {
+  const dt = ts - lastTime;
+  lastTime = ts;
+
+  if (!inCombat && !inTownUI) {
+    moveAccum += dt;
+    if (moveAccum >= MOVE_INTERVAL) {
+      moveAccum = 0;
+      if (keys['ArrowUp']    || keys['w']) tryMove(0,-1);
+      else if (keys['ArrowDown'] || keys['s']) tryMove(0,1);
+      else if (keys['ArrowLeft'] || keys['a']) tryMove(-1,0);
+      else if (keys['ArrowRight']|| keys['d']) tryMove(1,0);
+    }
+  }
+
+  // Animate water tiles (re-render every 1.2s)
+  if (ts % 1200 < dt + 16) render();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+addLog('Welcome to the Realm of Echoes, traveller.', 'discovery');
+addLog('Use WASD or arrow keys to explore.');
+addLog('Five towns await across the realm.', 'system');
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
